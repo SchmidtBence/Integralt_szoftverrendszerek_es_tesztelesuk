@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Foci</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            background: #4caf50;
+            display: block;
+            margin: 0 auto;
+        }
+
+        body {
+            text-align: center;
+            font-family: sans-serif;
+            background: #eaf6ff;
+        }
+
+        #score {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        #restartBtn {
+            margin-top: 10px;
+            font-size: 16px;
+            padding: 8px 16px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Robot Foci</h2>
+    <div id="score">Pontszám: 0 : 0</div>
+    <canvas id="game" width="600" height="400"></canvas>
+    <button id="restartBtn">Újraindítás</button>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const restartBtn = document.getElementById('restartBtn');
+        const ws = new WebSocket('ws://localhost:8080');
+
+        let playerId = null;
+        let gameState = null;
+        let shownGameOver = false;
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === 'init') {
+                playerId = msg.playerId;
+                console.log('Csatlakoztál mint játékos:', playerId);
+            } else if (msg.type === 'update') {
+                gameState = msg.state;
+                playerId = msg.playerId;
+                updateScoreDisplay();
+                draw();
+
+                if (gameState.gameOver && !shownGameOver) {
+                    shownGameOver = true;
+
+                    const isWinner =
+                        (playerId === 0 && gameState.score[0] >= 5) ||
+                        (playerId === 1 && gameState.score[1] >= 5);
+
+                    const isLoser =
+                        (playerId === 0 && gameState.score[1] >= 5) ||
+                        (playerId === 1 && gameState.score[0] >= 5);
+
+                    if (isWinner) {
+                        alert('🎉 Te nyertél!');
+                        restartBtn.style.display = 'inline-block';
+                    } else if (isLoser) {
+                        alert('😞 Vesztettél!');
+                    }
+                }
+            }
+        };
+
+        restartBtn.onclick = () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'restart' }));
+                shownGameOver = false;
+                restartBtn.style.display = 'none';
+            }
+        };
+
+        function updateScoreDisplay() {
+            if (gameState && gameState.score) {
+                scoreDisplay.textContent = `Pontszám: ${gameState.score[0]} : ${gameState.score[1]}`;
+            }
+        }
+
+        function drawField() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+
+            // középvonal
+            ctx.beginPath();
+            ctx.moveTo(w / 2, 0);
+            ctx.lineTo(w / 2, h);
+            ctx.stroke();
+
+            // középkör
+            ctx.beginPath();
+            ctx.arc(w / 2, h / 2, 50, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            // középpont
+            ctx.beginPath();
+            ctx.arc(w / 2, h / 2, 3, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+
+            // kapuk
+            const goalHeight = 100;
+            const goalY = h / 2 - goalHeight / 2;
+            ctx.strokeRect(0, goalY, 5, goalHeight);          // bal kapu
+            ctx.strokeRect(w - 5, goalY, 5, goalHeight);      // jobb kapu
+
+            // kapuelőtti terület (büntetőterület)
+            const boxWidth = 60;
+            const boxHeight = 150;
+            const boxY = h / 2 - boxHeight / 2;
+            ctx.strokeRect(0, boxY, boxWidth, boxHeight);             // bal oldal
+            ctx.strokeRect(w - boxWidth, boxY, boxWidth, boxHeight);  // jobb oldal
+        }
+
+        function draw() {
+            if (!gameState) return;
+
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawField();
+
+            const ball = gameState.ball;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, 8, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 4;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            gameState.players.forEach((p, i) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 18, 0, 2 * Math.PI);
+                ctx.fillStyle = i === playerId ? '#3f51b5' : '#e53935';
+                ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                ctx.shadowBlur = 6;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'white';
+                ctx.stroke();
+
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(i + 1, p.x, p.y);
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            let direction = null;
+            switch (e.key) {
+                case 'ArrowUp': direction = 'up'; break;
+                case 'ArrowDown': direction = 'down'; break;
+                case 'ArrowLeft': direction = 'left'; break;
+                case 'ArrowRight': direction = 'right'; break;
+            }
+            if (direction && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'input', direction }));
+            }
+        });
+    </script>
+</body>
+
+</html>
