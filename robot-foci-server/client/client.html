@@ -54,7 +54,6 @@
 
             if (msg.type === 'init') {
                 playerId = msg.playerId;
-                console.log('Csatlakoztál mint játékos:', playerId);
             } else if (msg.type === 'update') {
                 gameState = msg.state;
                 playerId = msg.playerId;
@@ -123,15 +122,15 @@
             // kapuk
             const goalHeight = 100;
             const goalY = h / 2 - goalHeight / 2;
-            ctx.strokeRect(0, goalY, 5, goalHeight);          // bal kapu
-            ctx.strokeRect(w - 5, goalY, 5, goalHeight);      // jobb kapu
+            ctx.strokeRect(0, goalY, 5, goalHeight);   
+            ctx.strokeRect(w - 5, goalY, 5, goalHeight);
 
             // kapuelőtti terület (büntetőterület)
             const boxWidth = 60;
             const boxHeight = 150;
             const boxY = h / 2 - boxHeight / 2;
-            ctx.strokeRect(0, boxY, boxWidth, boxHeight);             // bal oldal
-            ctx.strokeRect(w - boxWidth, boxY, boxWidth, boxHeight);  // jobb oldal
+            ctx.strokeRect(0, boxY, boxWidth, boxHeight);
+            ctx.strokeRect(w - boxWidth, boxY, boxWidth, boxHeight);
         }
 
         function draw() {
