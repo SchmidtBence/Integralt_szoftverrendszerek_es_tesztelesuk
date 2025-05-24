@@ -18,7 +18,6 @@ wss.on('connection', (ws) => {
     const playerId = clients.length;
     clients.push(ws);
     ws.send(JSON.stringify({ type: 'init', playerId }));
-    console.log(`Játékos ${playerId} csatlakozott.`);
 
     ws.on('message', (message) => {
         try {
@@ -30,8 +29,6 @@ wss.on('connection', (ws) => {
 
             if (data.type === 'restart') {
                 gameState = createGameState();
-                console.log('🔄 Játék újraindítva');
-                // azonnali állapotküldés mindenkinek
                 const update = JSON.stringify({ type: 'update', state: gameState });
                 clients.forEach((client) => client.send(update));
             }
@@ -42,7 +39,6 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        console.log(`Játékos ${playerId} lecsatlakozott.`);
         clients.splice(clients.indexOf(ws), 1);
         gameState = createGameState();
     });
